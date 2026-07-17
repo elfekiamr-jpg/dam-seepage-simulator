@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seepage Under Dam — Sheet Pile &amp; Heterogeneous K Field</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #10151c;
+    --panel: #171f28;
+    --panel-2: #1c2530;
+    --line: #2a3542;
+    --line-soft: #212a34;
+    --text: #e9e4d8;
+    --text-dim: #8fa0ac;
+    --text-faint: #5c6a75;
+    --water: #4a9bc9;
+    --water-deep: #1f5a80;
+    --soil: #a9835c;
+    --soil-dark: #5c4632;
+    --amber: #dc9a3c;
+    --amber-hot: #e8622c;
+    --ok: #5fb98a;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --disp: 'Space Grotesk', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{
+    background-image:
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-attachment: fixed;
+  }
+  .wrap{max-width:1360px;margin:0 auto;padding:28px 22px 60px;}
+
+  header{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:22px;}
+  .brand{display:flex;flex-direction:column;gap:4px;}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--amber);text-transform:uppercase;}
+  h1{font-family:var(--disp);font-weight:600;font-size:26px;margin:0;letter-spacing:.01em;}
+  .sub{font-family:var(--sans);color:var(--text-dim);font-size:13.5px;max-width:560px;line-height:1.5;}
+  .status{font-family:var(--mono);font-size:12px;color:var(--text-dim);text-align:right;}
+  .status b{color:var(--ok);}
+  .status.solving b{color:var(--amber);}
+
+  .grid{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start;}
+  @media (max-width:920px){ .grid{grid-template-columns:1fr;} }
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:2px;}
+
+  .controls{padding:18px;}
+  .ctrl-group{margin-bottom:20px;}
+  .ctrl-group:last-child{margin-bottom:0;}
+  .group-title{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint);
+    border-bottom:1px solid var(--line-soft);padding-bottom:6px;margin-bottom:12px;}
+  .row{margin-bottom:13px;}
+  .row:last-child{margin-bottom:0;}
+  .row label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-dim);margin-bottom:5px;}
+  .row label .val{font-family:var(--mono);color:var(--text);font-size:12px;}
+  input[type=range]{
+    -webkit-appearance:none;width:100%;height:3px;background:var(--line);border-radius:2px;outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--amber);
+    border:2px solid var(--bg);cursor:pointer;margin-top:-5px;
+  }
+  input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:var(--amber);border:2px solid var(--bg);cursor:pointer;}
+  input[type=range]::-webkit-slider-runnable-track{height:3px;background:var(--line);border-radius:2px;}
+
+  button{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:2px;
+    cursor:pointer;transition:border-color .15s, color .15s;}
+  button:hover{border-color:var(--amber);color:var(--amber);}
+  .btnrow{display:flex;gap:8px;}
+  .btnrow button{flex:1;}
+
+  .legend-note{font-family:var(--mono);font-size:10.5px;color:var(--text-faint);line-height:1.6;margin-top:10px;}
+
+  .main{display:flex;flex-direction:column;gap:16px;}
+  .viz-card{padding:16px 16px 12px;}
+  .viz-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;flex-wrap:wrap;gap:6px;}
+  .viz-title{font-family:var(--disp);font-size:14.5px;font-weight:600;color:var(--text);}
+  .viz-title span{color:var(--text-faint);font-family:var(--mono);font-weight:400;font-size:11px;margin-left:8px;}
+  canvas{display:block;width:100%;height:auto;border-radius:1px;}
+  .cmap-legend{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;color:var(--text-faint);}
+  .cmap-bar{width:120px;height:8px;border-radius:2px;}
+
+  .results{padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;}
+  .stat{border-left:2px solid var(--line);padding-left:10px;}
+  .stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);}
+  .stat .v{font-family:var(--disp);font-size:19px;font-weight:600;margin-top:2px;}
+  .stat .u{font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-left:3px;}
+  .stat.warn{border-left-color:var(--amber-hot);}
+  .stat.warn .v{color:var(--amber-hot);}
+  .stat.safe{border-left-color:var(--ok);}
+  .stat.safe .v{color:var(--ok);}
+
+  footer{margin-top:26px;font-family:var(--mono);font-size:11px;color:var(--text-faint);line-height:1.7;
+    border-top:1px solid var(--line);padding-top:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="eyebrow">Steady-State Seepage · Confined Flow Net</div>
+      <h1>Seepage Beneath a Dam with a Sheet Pile Cutoff</h1>
+      <div class="sub">2D finite-difference solution of ∇·(K∇h)=0 in a spatially random, log-Gaussian hydraulic conductivity field. Move the cutoff, change the soil statistics, watch the flow net bend.</div>
+    </div>
+    <div class="status" id="status">solved in <b id="statusVal">—</b></div>
+  </header>
+
+  <div class="grid">
+    <!-- CONTROLS -->
+    <div class="panel controls">
+
+      <div class="ctrl-group">
+        <div class="group-title">Domain</div>
+        <div class="row">
+          <label>Foundation length (L) <span class="val" id="v_L"></span></label>
+          <input type="range" id="L" min="40" max="240" step="2" value="100">
+        </div>
+        <div class="row">
+          <label>Foundation depth to bedrock (D) <span class="val" id="v_D"></span></label>
+          <input type="range" id="D" min="15" max="90" step="1" value="40">
+        </div>
+        <div class="row">
+          <label>Dam base width <span class="val" id="v_damW"></span></label>
+          <input type="range" id="damW" min="5" max="80" step="1" value="20">
+        </div>
+        <div class="row">
+          <label>Reservoir head (upstream) <span class="val" id="v_H1"></span></label>
+          <input type="range" id="H1" min="1" max="45" step="0.5" value="12">
+        </div>
+        <div class="row">
+          <label>Tailwater head (downstream) <span class="val" id="v_H2"></span></label>
+          <input type="range" id="H2" min="0" max="20" step="0.5" value="2">
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <div class="group-title">Sheet pile cutoffs</div>
+        <div class="row">
+          <label>Number of piles <span class="val" id="v_pileCount"></span></label>
+          <input type="range" id="pileCount" min="0" max="3" step="1" value="1">
+        </div>
+
+        <div class="pile-group" id="pileGroup1" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-soft);">
+          <div style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#e6564a;margin-bottom:8px;">Pile 1</div>
+          <div class="row">
+            <label>Position under dam base (heel→toe) <span class="val" id="v_pileX1"></span></label>
+            <input type="range" id="pileX1" min="0" max="100" step="1" value="50">
+          </div>
+          <div class="row">
+            <label>Penetration depth <span class="val" id="v_pileD1"></span></label>
+            <input type="range" id="pileD1" min="0" max="100" step="1" value="35">
+          </div>
+        </div>
+
+        <div class="pile-group" id="pileGroup2" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-soft);">
+          <div style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#e6564a;margin-bottom:8px;">Pile 2</div>
+          <div class="row">
+            <label>Position under dam base (heel→toe) <span class="val" id="v_pileX2"></span></label>
+            <input type="range" id="pileX2" min="0" max="100" step="1" value="85">
+          </div>
+          <div class="row">
+            <label>Penetration depth <span class="val" id="v_pileD2"></span></label>
+            <input type="range" id="pileD2" min="0" max="100" step="1" value="20">
+          </div>
+        </div>
+
+        <div class="pile-group" id="pileGroup3" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-soft);">
+          <div style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#e6564a;margin-bottom:8px;">Pile 3</div>
+          <div class="row">
+            <label>Position under dam base (heel→toe) <span class="val" id="v_pileX3"></span></label>
+            <input type="range" id="pileX3" min="0" max="100" step="1" value="15">
+          </div>
+          <div class="row">
+            <label>Penetration depth <span class="val" id="v_pileD3"></span></label>
+            <input type="range" id="pileD3" min="0" max="100" step="1" value="15">
+          </div>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <div class="group-title">Outlet piping safety</div>
+        <div class="row">
+          <label>Critical exit gradient i<sub>cr</sub> <span class="val" id="v_icr"></span></label>
+          <input type="range" id="icr" min="0.6" max="1.3" step="0.05" value="1.0">
+        </div>
+        <div class="row">
+          <label>Required safety factor <span class="val" id="v_fsreq"></span></label>
+          <input type="range" id="fsreq" min="1.5" max="6" step="0.5" value="4">
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <div class="group-title">Hydraulic conductivity field — log-Gaussian</div>
+        <div class="row">
+          <label>Geometric mean K<sub>x,g</sub> <span class="val" id="v_Kg"></span></label>
+          <input type="range" id="Kg" min="-3" max="2" step="0.05" value="0.7">
+        </div>
+        <div class="row">
+          <label>Heterogeneity σ(ln K) <span class="val" id="v_sigma"></span></label>
+          <input type="range" id="sigma" min="0" max="2.2" step="0.05" value="0.8">
+        </div>
+        <div class="row">
+          <label>Correlation length <span class="val" id="v_corr"></span></label>
+          <input type="range" id="corr" min="2" max="60" step="1" value="14">
+        </div>
+        <div class="row">
+          <label>Anisotropy ratio K<sub>y</sub>/K<sub>x</sub> <span class="val" id="v_aniso"></span></label>
+          <input type="range" id="aniso" min="0.02" max="2" step="0.01" value="0.3">
+        </div>
+        <div class="btnrow" style="margin-top:8px;">
+          <button id="reseedBtn">New random field</button>
+        </div>
+      </div>
+
+      <div class="legend-note">
+        Solved by Jacobi-preconditioned conjugate gradient on the unknown-node subsystem of the harmonic-mean finite-volume stencil (Dirichlet-neighbor terms move to the RHS). K field is isotropic in spatial pattern; K<sub>y</sub> = coefficient × K<sub>x</sub> at every point (same random structure, scaled magnitude — a fixed anisotropy ratio, not a second independent field). Each cutoff wall = zero horizontal conductance across its column down to its penetration depth; overlapping piles at the same column use whichever is deeper. Left/right/bottom edges are no-flow (far-field symmetry &amp; impervious base).
+      </div>
+    </div>
+
+    <!-- VISUALS -->
+    <div class="main">
+
+      <div class="panel viz-card">
+        <div class="viz-head">
+          <div class="viz-title">Hydraulic conductivity field K<sub>x</sub> <span>ln K, m/day</span></div>
+          <div class="cmap-legend"><span>low</span><div class="cmap-bar" style="background:linear-gradient(90deg,#0d0826,#3b0f70,#973e94,#dd513a,#f6a531,#f6f6a0)"></div><span>high</span></div>
+        </div>
+        <canvas id="kCanvas"></canvas>
+      </div>
+
+      <div class="panel viz-card">
+        <div class="viz-head">
+          <div class="viz-title">Head field, equipotentials &amp; flow net <span>total head h, m — drag a pile or a dam edge to reposition</span></div>
+          <div class="cmap-legend"><span>H₂</span><div class="cmap-bar" style="background:linear-gradient(90deg,#122c4a,#1f6f9c,#5fc4dc,#eaf7f7)"></div><span>H₁</span></div>
+        </div>
+        <canvas id="hCanvas"></canvas>
+      </div>
+
+      <div class="panel viz-card">
+        <div class="viz-head">
+          <div class="viz-title">Uplift pressure at dam base <span>pressure head h, m of water — heel → toe</span></div>
+          <div class="cmap-legend"><span style="color:#e6564a;">— base head</span><span style="margin-left:10px;">- - H₁ / H₂</span></div>
+        </div>
+        <canvas id="upliftCanvas"></canvas>
+      </div>
+
+      <div class="panel viz-card">
+        <div class="viz-head">
+          <div class="viz-title">Outlet-side exit conditions <span>downstream of the toe</span></div>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:220px;">
+            <div class="cmap-legend" style="margin-bottom:6px;"><span style="color:#4a9bc9;">— vertical exit velocity v<sub>z</sub></span></div>
+            <canvas id="velCanvas"></canvas>
+          </div>
+          <div style="flex:1;min-width:220px;">
+            <div class="cmap-legend" style="margin-bottom:6px;"><span style="color:#e6564a;">— exit gradient i</span><span style="margin-left:8px;">- - i<sub>cr</sub> / i<sub>allow</sub></span></div>
+            <canvas id="gradCanvas"></canvas>
+          </div>
+        </div>
+        <div id="verdictBar" style="margin-top:10px;padding:8px 10px;border-radius:2px;font-family:var(--mono);font-size:12px;"></div>
+      </div>
+
+      <div class="panel results">
+        <div class="stat">
+          <div class="k">Seepage discharge</div>
+          <div class="v" id="stat_Q">—<span class="u">m³/day per m</span></div>
+        </div>
+        <div class="stat">
+          <div class="k">Max exit gradient</div>
+          <div class="v" id="stat_ig">—<span class="u">i</span></div>
+        </div>
+        <div class="stat" id="stat_fs_card">
+          <div class="k">Safety factor (i<sub>cr</sub>/i<sub>max</sub>)</div>
+          <div class="v" id="stat_fs">—</div>
+        </div>
+        <div class="stat">
+          <div class="k">Uplift force (resultant)</div>
+          <div class="v" id="stat_uplift">—<span class="u">kN per m</span></div>
+        </div>
+        <div class="stat">
+          <div class="k">Solver iterations</div>
+          <div class="v" id="stat_iter">—</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    Screening tool for teaching / preliminary insight only — not a substitute for a calibrated site model. Critical exit gradient i꜀ᵣ and required safety factor are user inputs (i꜀ᵣ ≈ (Gs−1)/(1+e), typically 0.9–1.1 for saturated sand); set them from your own soil data. Flow lines are traced from the Darcy velocity field (Euler integration) and are approximate in strongly heterogeneous zones.
+  </footer>
+
+</div>
+
+<script>
+/* ---------------------------------------------------------------------
+   RNG + log-Gaussian correlated field
+--------------------------------------------------------------------- */
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gaussianRandom(rng){
+  let u = 1 - rng(), v = rng();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+
+function buildKField(nx, nz, dx, dz, corrLen, Kg, sigmaLnK, seed){
+  const rng = mulberry32(seed);
+  const noise = new Float64Array(nx*nz);
+  for (let n=0;n<nx*nz;n++) noise[n] = gaussianRandom(rng);
+
+  const sigX = Math.max(0.5, corrLen/dx);
+  const sigZ = Math.max(0.5, corrLen/dz);
+  const rX = Math.min(nx-1, Math.ceil(3*sigX));
+  const rZ = Math.min(nz-1, Math.ceil(3*sigZ));
+
+  const kernX = [];
+  for (let k=-rX;k<=rX;k++) kernX.push(Math.exp(-0.5*(k/sigX)**2));
+  let sX = kernX.reduce((a,b)=>a+b,0);
+  for (let k=0;k<kernX.length;k++) kernX[k]/=sX;
+
+  const kernZ = [];
+  for (let k=-rZ;k<=rZ;k++) kernZ.push(Math.exp(-0.5*(k/sigZ)**2));
+  let sZ = kernZ.reduce((a,b)=>a+b,0);
+  for (let k=0;k<kernZ.length;k++) kernZ[k]/=sZ;
+
+  const tmp = new Float64Array(nx*nz);
+  for (let j=0;j<nz;j++){
+    for (let i=0;i<nx;i++){
+      let acc=0;
+      for (let k=-rX;k<=rX;k++){
+        let ii=i+k; if(ii<0)ii=0; if(ii>nx-1)ii=nx-1;
+        acc += noise[j*nx+ii]*kernX[k+rX];
+      }
+      tmp[j*nx+i]=acc;
+    }
+  }
+  const blurred = new Float64Array(nx*nz);
+  for (let i=0;i<nx;i++){
+    for (let j=0;j<nz;j++){
+      let acc=0;
+      for (let k=-rZ;k<=rZ;k++){
+        let jj=j+k; if(jj<0)jj=0; if(jj>nz-1)jj=nz-1;
+        acc += tmp[jj*nx+i]*kernZ[k+rZ];
+      }
+      blurred[j*nx+i]=acc;
+    }
+  }
+  let mean=0; for (let n=0;n<nx*nz;n++) mean+=blurred[n]; mean/=(nx*nz);
+  let varr=0; for (let n=0;n<nx*nz;n++) varr+=(blurred[n]-mean)**2; varr/=(nx*nz);
+  const std = Math.sqrt(varr)||1;
+
+  const K = new Float64Array(nx*nz);
+  const lnZ = new Float64Array(nx*nz);
+  const lnKg = Math.log(Kg);
+  for (let n=0;n<nx*nz;n++){
+    const z = (blurred[n]-mean)/std;
+    lnZ[n] = lnKg + sigmaLnK*z;
+    K[n] = Math.exp(lnZ[n]);
+  }
+  return {K, lnK: lnZ};
+}
+
+/* ---------------------------------------------------------------------
+   Solver: matrix-free preconditioned conjugate gradient on the harmonic-
+   mean finite-volume Laplace system, with pile cutoff. The face-
+   conductance stencil is symmetric positive definite (standard grounded
+   graph Laplacian), so CG applies directly to the unknown-node subsystem;
+   Dirichlet neighbor contributions move to the RHS. A Jacobi (diagonal)
+   preconditioner keeps iteration counts low even for strongly
+   heterogeneous / anisotropic K fields, where unpreconditioned
+   relaxation (SOR) converges slowly or stalls.
+--------------------------------------------------------------------- */
+function Kface(a,b){ return (a>0&&b>0) ? (2*a*b/(a+b)) : 0; }
+
+function solveSeepage(nx, nz, dx, dz, Kx, Ky, damStartI, damEndI, H1, H2, piles, maxIter, tol){
+  const N = nx*nz;
+  const h = new Float64Array(N);
+  const fixed = new Uint8Array(N);
+  for (let i=0;i<nx;i++){
+    let val, isFixed=false;
+    if (i < damStartI){ val=H1; isFixed=true; }
+    else if (i > damEndI){ val=H2; isFixed=true; }
+    else { val = H1 + (H2-H1)*(i/(nx-1)); }
+    h[i]=val; fixed[i]=isFixed?1:0;
+  }
+  for (let j=1;j<nz;j++) for (let i=0;i<nx;i++) h[j*nx+i] = H1 + (H2-H1)*(i/(nx-1));
+
+  // each grid column can carry a sealed-face depth (deepest pile at that column)
+  const pileBlockDepth = new Int32Array(nx).fill(-1);
+  for (const pl of piles){
+    if (pl.pileDepthJ > pileBlockDepth[pl.pileI]) pileBlockDepth[pl.pileI] = pl.pileDepthJ;
+  }
+
+  // face conductances (W/E use Kx, N/S use Ky) and diagonal, with pile cutoff blocking
+  const cW=new Float64Array(N), cE=new Float64Array(N), cN=new Float64Array(N), cS=new Float64Array(N), diag=new Float64Array(N);
+  for (let j=0;j<nz;j++){
+    for (let i=0;i<nx;i++){
+      const idx=j*nx+i;
+      let s=0;
+      if (i>0){
+        const blocked = (pileBlockDepth[i]>=0 && j<=pileBlockDepth[i]);
+        if (!blocked){ const kf=Kface(Kx[idx],Kx[idx-1]); cW[idx]=kf; s+=kf; }
+      }
+      if (i<nx-1){
+        const blocked = (pileBlockDepth[i+1]>=0 && j<=pileBlockDepth[i+1]);
+        if (!blocked){ const kf=Kface(Kx[idx],Kx[idx+1]); cE[idx]=kf; s+=kf; }
+      }
+      if (j>0){ const kf=Kface(Ky[idx],Ky[idx-nx]); cN[idx]=kf; s+=kf; }
+      if (j<nz-1){ const kf=Kface(Ky[idx],Ky[idx+nx]); cS[idx]=kf; s+=kf; }
+      diag[idx]=s;
+    }
+  }
+
+  // unknown-node index map (Dirichlet nodes are excluded from the system)
+  const unkIndex = new Int32Array(N).fill(-1);
+  const unkList = [];
+  for (let idx=0; idx<N; idx++) if (!fixed[idx]){ unkIndex[idx]=unkList.length; unkList.push(idx); }
+  const M = unkList.length;
+  if (M===0) return {h, fixed, iter:0, resid:0};
+
+  // RHS: known Dirichlet-neighbor contributions
+  const b = new Float64Array(M);
+  for (let k=0;k<M;k++){
+    const idx=unkList[k], i=idx%nx, j=(idx/nx)|0;
+    let bv=0;
+    if (i>0 && fixed[idx-1]) bv += cW[idx]*h[idx-1];
+    if (i<nx-1 && fixed[idx+1]) bv += cE[idx]*h[idx+1];
+    if (j>0 && fixed[idx-nx]) bv += cN[idx]*h[idx-nx];
+    if (j<nz-1 && fixed[idx+nx]) bv += cS[idx]*h[idx+nx];
+    b[k]=bv;
+  }
+
+  function applyA(x, out){
+    for (let k=0;k<M;k++){
+      const idx=unkList[k], i=idx%nx, j=(idx/nx)|0;
+      let val = diag[idx]*x[k];
+      if (i>0 && !fixed[idx-1]) val -= cW[idx]*x[unkIndex[idx-1]];
+      if (i<nx-1 && !fixed[idx+1]) val -= cE[idx]*x[unkIndex[idx+1]];
+      if (j>0 && !fixed[idx-nx]) val -= cN[idx]*x[unkIndex[idx-nx]];
+      if (j<nz-1 && !fixed[idx+nx]) val -= cS[idx]*x[unkIndex[idx+nx]];
+      out[k]=val;
+    }
+  }
+
+  const x = new Float64Array(M);
+  for (let k=0;k<M;k++) x[k]=h[unkList[k]]; // warm-start from the linear-interpolation guess
+
+  const Minv = new Float64Array(M);
+  for (let k=0;k<M;k++) Minv[k] = 1/diag[unkList[k]];
+
+  const Ax=new Float64Array(M), r=new Float64Array(M), z=new Float64Array(M), p=new Float64Array(M), Ap=new Float64Array(M);
+  applyA(x, Ax);
+  for (let k=0;k<M;k++) r[k]=b[k]-Ax[k];
+  for (let k=0;k<M;k++) z[k]=Minv[k]*r[k];
+  p.set(z);
+  let rz=0; for (let k=0;k<M;k++) rz+=r[k]*z[k];
+
+  let bNorm=0; for (let k=0;k<M;k++) bNorm+=b[k]*b[k]; bNorm=Math.sqrt(bNorm)||1;
+
+  let iter=0, relres=1e9;
+  for (iter=0; iter<maxIter; iter++){
+    applyA(p, Ap);
+    let pAp=0; for (let k=0;k<M;k++) pAp+=p[k]*Ap[k];
+    if (Math.abs(pAp)<1e-300) break;
+    const alpha = rz/pAp;
+    for (let k=0;k<M;k++) x[k]+=alpha*p[k];
+    for (let k=0;k<M;k++) r[k]-=alpha*Ap[k];
+    let rnorm=0; for (let k=0;k<M;k++) rnorm+=r[k]*r[k];
+    relres = Math.sqrt(rnorm)/bNorm;
+    if (relres<tol){ iter++; break; }
+    for (let k=0;k<M;k++) z[k]=Minv[k]*r[k];
+    let rzNew=0; for (let k=0;k<M;k++) rzNew+=r[k]*z[k];
+    const beta = rzNew/rz;
+    for (let k=0;k<M;k++) p[k]=z[k]+beta*p[k];
+    rz=rzNew;
+  }
+  for (let k=0;k<M;k++) h[unkList[k]]=x[k];
+  return {h, fixed, iter, resid: relres};
+}
+
+/* ---------------------------------------------------------------------
+   Marching squares (simple, non-ambiguity-resolved — fine for a flow net)
+--------------------------------------------------------------------- */
+function contourSegments(field, nx, nz, level){
+  const segs=[];
+  for (let j=0;j<nz-1;j++){
+    for (let i=0;i<nx-1;i++){
+      const v00=field[j*nx+i], v10=field[j*nx+i+1], v01=field[(j+1)*nx+i], v11=field[(j+1)*nx+i+1];
+      const pts=[];
+      // top edge (v00-v10)
+      if ((v00>level)!==(v10>level)){ const t=(level-v00)/(v10-v00); pts.push([i+t, j]); }
+      // right edge (v10-v11)
+      if ((v10>level)!==(v11>level)){ const t=(level-v10)/(v11-v10); pts.push([i+1, j+t]); }
+      // bottom edge (v01-v11)
+      if ((v01>level)!==(v11>level)){ const t=(level-v01)/(v11-v01); pts.push([i+t, j+1]); }
+      // left edge (v00-v01)
+      if ((v00>level)!==(v01>level)){ const t=(level-v00)/(v01-v00); pts.push([i, j+t]); }
+      if (pts.length===2){ segs.push([pts[0],pts[1]]); }
+      else if (pts.length===4){ segs.push([pts[0],pts[1]]); segs.push([pts[2],pts[3]]); }
+    }
+  }
+  return segs;
+}
+
+/* ---------------------------------------------------------------------
+   Colormaps
+--------------------------------------------------------------------- */
+function lerp(a,b,t){return a+(b-a)*t;}
+function mixColor(c1,c2,t){
+  return [lerp(c1[0],c2[0],t), lerp(c1[1],c2[1],t), lerp(c1[2],c2[2],t)];
+}
+const K_STOPS = [[13,8,38],[59,15,112],[151,62,148],[221,81,58],[246,165,49],[246,246,160]];
+function kColor(t){
+  t = Math.min(1,Math.max(0,t));
+  const n=K_STOPS.length-1;
+  const seg = Math.min(n-1, Math.floor(t*n));
+  const local = t*n-seg;
+  return mixColor(K_STOPS[seg], K_STOPS[seg+1], local);
+}
+const H_STOPS = [[18,44,74],[31,111,156],[95,196,220],[234,247,247]];
+function hColor(t){
+  t = Math.min(1,Math.max(0,t));
+  const n=H_STOPS.length-1;
+  const seg = Math.min(n-1, Math.floor(t*n));
+  const local = t*n-seg;
+  return mixColor(H_STOPS[seg], H_STOPS[seg+1], local);
+}
+
+/* ---------------------------------------------------------------------
+   Main app
+--------------------------------------------------------------------- */
+const els = {};
+['L','D','damW','H1','H2','pileCount','pileX1','pileD1','pileX2','pileD2','pileX3','pileD3','Kg','sigma','corr','aniso','icr','fsreq'].forEach(id=>{ els[id]=document.getElementById(id); });
+const statusEl = document.getElementById('status');
+const statusVal = document.getElementById('statusVal');
+let currentSeed = 1337;
+let renderState = null;
+let hBaseSnapshot = null;
+
+function fmtK(v){
+  if (v>=100) return v.toFixed(0);
+  if (v>=1) return v.toFixed(1);
+  return v.toFixed(3);
+}
+
+function readParams(){
+  const pileCount = +els.pileCount.value;
+  const pileFracs = [];
+  for (let n=1;n<=pileCount;n++){
+    pileFracs.push({ xFrac: +els['pileX'+n].value/100, dFrac: +els['pileD'+n].value/100 });
+  }
+  return {
+    L: +els.L.value, D: +els.D.value, damW: +els.damW.value,
+    H1: +els.H1.value, H2: +els.H2.value,
+    pileCount, pileFracs,
+    Kg: Math.pow(10, +els.Kg.value), sigma: +els.sigma.value, corr: +els.corr.value,
+    aniso: +els.aniso.value, icr: +els.icr.value, fsreq: +els.fsreq.value
+  };
+}
+
+function updateLabels(p){
+  document.getElementById('v_L').textContent = p.L+' m';
+  document.getElementById('v_D').textContent = p.D+' m';
+  document.getElementById('v_damW').textContent = p.damW+' m';
+  document.getElementById('v_H1').textContent = p.H1+' m';
+  document.getElementById('v_H2').textContent = p.H2+' m';
+  document.getElementById('v_pileCount').textContent = p.pileCount===0 ? 'none' : p.pileCount;
+  for (let n=1;n<=3;n++){
+    const grp = document.getElementById('pileGroup'+n);
+    if (n<=p.pileCount){
+      grp.style.display = '';
+      const f = p.pileFracs[n-1];
+      document.getElementById('v_pileX'+n).textContent = Math.round(f.xFrac*p.damW)+' m from heel';
+      document.getElementById('v_pileD'+n).textContent = Math.round(f.dFrac*p.D)+' m';
+    } else {
+      grp.style.display = 'none';
+    }
+  }
+  document.getElementById('v_Kg').textContent = fmtK(p.Kg)+' m/day';
+  document.getElementById('v_sigma').textContent = p.sigma.toFixed(2);
+  document.getElementById('v_corr').textContent = p.corr+' m';
+  document.getElementById('v_aniso').textContent = p.aniso.toFixed(2);
+  document.getElementById('v_icr').textContent = p.icr.toFixed(2);
+  document.getElementById('v_fsreq').textContent = p.fsreq.toFixed(1)+'×';
+}
+
+function drawHeatmap(canvas, field, nx, nz, colorFn, vmin, vmax, yOffset, drawH){
+  const w = canvas.width;
+  const img = document.createElement('canvas');
+  img.width = nx; img.height = nz;
+  const ictx = img.getContext('2d');
+  const idata = ictx.createImageData(nx, nz);
+  const range = (vmax-vmin)||1;
+  for (let j=0;j<nz;j++){
+    for (let i=0;i<nx;i++){
+      const idx=j*nx+i;
+      const t = (field[idx]-vmin)/range;
+      const c = colorFn(t);
+      const p=(j*nx+i)*4;
+      idata.data[p]=c[0]; idata.data[p+1]=c[1]; idata.data[p+2]=c[2]; idata.data[p+3]=255;
+    }
+  }
+  ictx.putImageData(idata,0,0);
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(img,0,yOffset,w,drawH);
+}
+
+function drawOverlay(ctx, w, h, nx, nz, damStartI, damEndI, piles, H1, H2, yOffset, topMargin){
+  const sx = w/(nx-1), sy = h/(nz-1);
+  const dx0 = damStartI*sx, dx1 = damEndI*sx;
+  const baseW = dx1-dx0;
+  const yGround = yOffset;
+
+  // vertical scale for above-ground drawing (purely illustrative, not physical)
+  const crestElevM = Math.max(H1,H2)*1.25 + 2;
+  const usableTop = topMargin - 10;
+  const pxPerM = usableTop / crestElevM;
+  const damHpx = crestElevM*pxPerM;
+  const yCrest = yGround - damHpx;
+
+  const crestW = Math.max(10, baseW*0.16);
+  const crestX0 = dx0; // upstream face is vertical, flush with the heel
+  const crestX1 = crestX0+crestW;
+
+  // profile: upstream face runs straight vertical from crest to heel; the
+  // downstream side narrows into the neck near the crest, then splays out
+  // in a long diagonal down to the toe
+  const yNeckBottom = yCrest + damHpx*0.32;
+
+  function faceXUp(y){ return dx0; }
+  function faceXDn(y){
+    if (y>=yNeckBottom){ const t=(yGround-y)/(yGround-yNeckBottom); return dx1 + t*(crestX1-dx1); }
+    return crestX1;
+  }
+
+  function damPath(){
+    ctx.beginPath();
+    ctx.moveTo(dx0,yCrest);
+    ctx.lineTo(dx0,yGround);
+    ctx.lineTo(dx1,yGround);
+    ctx.lineTo(crestX1,yNeckBottom);
+    ctx.lineTo(crestX1,yCrest);
+    ctx.closePath();
+  }
+
+  // --- dam body: solid brown fill ---
+  const bodyGrad = ctx.createLinearGradient(0,yCrest,0,yGround);
+  bodyGrad.addColorStop(0,'#8a6238');
+  bodyGrad.addColorStop(1,'#4e3620');
+  ctx.fillStyle = bodyGrad;
+  damPath(); ctx.fill();
+
+  // subtle fill-material hatching, clipped to the dam silhouette
+  ctx.save(); damPath(); ctx.clip();
+  ctx.strokeStyle='rgba(233,228,216,0.16)'; ctx.lineWidth=1;
+  for (let x=dx0-damHpx; x<dx1+damHpx; x+=8){
+    ctx.beginPath(); ctx.moveTo(x,yGround); ctx.lineTo(x+damHpx,yCrest); ctx.stroke();
+  }
+  ctx.restore();
+
+  // outline
+  ctx.strokeStyle = '#e9e4d8'; ctx.lineWidth = 1.6;
+  damPath(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(20,26,33,0.9)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(crestX0,yCrest); ctx.lineTo(crestX1,yCrest); ctx.stroke();
+
+  // ground line either side of the dam
+  ctx.strokeStyle = '#8a6b45'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0,yGround); ctx.lineTo(dx0,yGround); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(dx1,yGround); ctx.lineTo(w,yGround); ctx.stroke();
+
+  // --- reservoir (upstream) & tailwater (downstream) pools ---
+  function pool(xEdge, faceXFn, headM, toRight){
+    if (headM<=0) return;
+    const yW = Math.max(yCrest+3, yGround - headM*pxPerM);
+    const faceX = faceXFn(yW);
+    ctx.fillStyle = 'rgba(74,155,201,0.55)';
+    ctx.beginPath();
+    if (toRight){
+      ctx.moveTo(xEdge,yGround); ctx.lineTo(xEdge,yW); ctx.lineTo(faceX,yW); ctx.lineTo(dx1,yGround);
+    } else {
+      ctx.moveTo(xEdge,yGround); ctx.lineTo(xEdge,yW); ctx.lineTo(faceX,yW); ctx.lineTo(dx0,yGround);
+    }
+    ctx.closePath(); ctx.fill();
+    // water surface line + level marker (small triangle)
+    ctx.strokeStyle = 'rgba(160,215,235,0.9)'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(xEdge,yW); ctx.lineTo(faceX,yW); ctx.stroke();
+    const markerX = toRight ? xEdge - (xEdge-faceX)*0.12 : xEdge + (faceX-xEdge)*0.12;
+    ctx.fillStyle = 'rgba(74,155,201,0.9)';
+    ctx.beginPath();
+    ctx.moveTo(markerX-6, yW-9); ctx.lineTo(markerX+6, yW-9); ctx.lineTo(markerX, yW); ctx.closePath(); ctx.fill();
+  }
+  pool(0, faceXUp, H1, false);
+  pool(w, faceXDn, H2, true);
+
+  // sheet piles — driven into the foundation only, starting right at ground
+  // level (never drawn poking up above the foundation into the dam body).
+  // Drawn as a single filled steel plate rather than a double stroke.
+  const pileW = 6;
+  for (const pl of piles){
+    const px = pl.pileI*sx;
+    const pyTop = yGround;
+    const pyBot = yOffset + pl.pileDepthJ*sy;
+    const steelGrad = ctx.createLinearGradient(px-pileW/2,0,px+pileW/2,0);
+    steelGrad.addColorStop(0,'#5d6670');
+    steelGrad.addColorStop(0.45,'#cdd4da');
+    steelGrad.addColorStop(0.55,'#cdd4da');
+    steelGrad.addColorStop(1,'#5d6670');
+    ctx.fillStyle = steelGrad;
+    ctx.fillRect(px-pileW/2, pyTop, pileW, pyBot-pyTop);
+    ctx.strokeStyle = '#333a41'; ctx.lineWidth = 1;
+    ctx.strokeRect(px-pileW/2, pyTop, pileW, pyBot-pyTop);
+  }
+}
+
+function drawUpliftDiagram(canvas, baseH, nx, H1, H2, damStartI, damEndI, piles){
+  const w = canvas.width, h = canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,w,h);
+  const padL=6, padR=6, padT=14, padB=18;
+  const plotW = w-padL-padR, plotH = h-padT-padB;
+  const vmax = Math.max(H1,H2)*1.08 + 0.5, vmin = 0;
+  const sx = plotW/(nx-1);
+  function xPix(i){ return padL + i*sx; }
+  function yPix(v){ return padT + plotH*(1-(v-vmin)/(vmax-vmin)); }
+
+  // reference lines H1 / H2
+  ctx.setLineDash([4,3]);
+  ctx.strokeStyle = 'rgba(74,155,201,0.6)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(padL, yPix(H1)); ctx.lineTo(w-padR, yPix(H1)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(padL, yPix(H2)); ctx.lineTo(w-padR, yPix(H2)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // dam footprint shading
+  ctx.fillStyle = 'rgba(233,228,216,0.06)';
+  ctx.fillRect(xPix(damStartI), padT, xPix(damEndI)-xPix(damStartI), plotH);
+  ctx.strokeStyle = 'rgba(233,228,216,0.35)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(xPix(damStartI),padT); ctx.lineTo(xPix(damStartI),padT+plotH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(xPix(damEndI),padT); ctx.lineTo(xPix(damEndI),padT+plotH); ctx.stroke();
+
+  // pile markers
+  ctx.strokeStyle = 'rgba(230,60,50,0.7)'; ctx.lineWidth=1.4;
+  ctx.setLineDash([2,2]);
+  for (const pl of piles){
+    ctx.beginPath(); ctx.moveTo(xPix(pl.pileI),padT); ctx.lineTo(xPix(pl.pileI),padT+plotH); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // filled area under base-head curve
+  ctx.beginPath();
+  ctx.moveTo(xPix(0), yPix(vmin));
+  for (let i=0;i<nx;i++) ctx.lineTo(xPix(i), yPix(baseH[i]));
+  ctx.lineTo(xPix(nx-1), yPix(vmin));
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0,padT,0,padT+plotH);
+  grad.addColorStop(0,'rgba(230,60,50,0.32)');
+  grad.addColorStop(1,'rgba(230,60,50,0.02)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // base-head line
+  ctx.strokeStyle = '#e6564a'; ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  for (let i=0;i<nx;i++){
+    const x=xPix(i), y=yPix(baseH[i]);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // baseline
+  ctx.strokeStyle = 'rgba(233,228,216,0.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(padL,yPix(vmin)); ctx.lineTo(w-padR,yPix(vmin)); ctx.stroke();
+
+  // labels
+  ctx.fillStyle = 'rgba(143,160,172,0.9)';
+  ctx.font = '10px IBM Plex Mono, monospace';
+  ctx.textAlign='left';
+  ctx.fillText('heel', xPix(damStartI)+3, padT+11);
+  ctx.textAlign='right';
+  ctx.fillText('toe', xPix(damEndI)-3, padT+11);
+  ctx.textAlign='left';
+  ctx.fillText('H\u2081='+H1.toFixed(1)+'m', padL+2, yPix(H1)-3);
+  ctx.fillText('H\u2082='+H2.toFixed(1)+'m', padL+2, yPix(H2)-3);
+}
+
+function drawExitVelocityChart(canvas, xArr, vArr){
+  const w=canvas.width, h=canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,w,h);
+  const padL=8,padR=8,padT=10,padB=16;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  let vmax=0; for (const v of vArr) if (v>vmax) vmax=v;
+  vmax = vmax*1.15 || 1;
+  const n=xArr.length;
+  const sx = plotW/Math.max(1,(n-1));
+  function xPix(i){ return padL+i*sx; }
+  function yPix(v){ return padT+plotH*(1-v/vmax); }
+
+  ctx.beginPath(); ctx.moveTo(xPix(0), yPix(0));
+  for (let i=0;i<n;i++) ctx.lineTo(xPix(i), yPix(vArr[i]));
+  ctx.lineTo(xPix(n-1), yPix(0)); ctx.closePath();
+  const grad = ctx.createLinearGradient(0,padT,0,padT+plotH);
+  grad.addColorStop(0,'rgba(74,155,201,0.4)'); grad.addColorStop(1,'rgba(74,155,201,0.03)');
+  ctx.fillStyle=grad; ctx.fill();
+
+  ctx.strokeStyle='#4a9bc9'; ctx.lineWidth=2;
+  ctx.beginPath();
+  for (let i=0;i<n;i++){ const x=xPix(i),y=yPix(vArr[i]); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }
+  ctx.stroke();
+
+  ctx.strokeStyle='rgba(233,228,216,0.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(padL,yPix(0)); ctx.lineTo(w-padR,yPix(0)); ctx.stroke();
+
+  ctx.fillStyle='rgba(143,160,172,0.9)'; ctx.font='10px IBM Plex Mono, monospace';
+  ctx.textAlign='left'; ctx.fillText('toe', padL+2, padT+11);
+  ctx.textAlign='right'; ctx.fillText(vmax.toFixed(2)+' m/day', w-padR-2, padT+9);
+}
+
+function drawExitGradientChart(canvas, xArr, gArr, icr, iallow){
+  const w=canvas.width, h=canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,w,h);
+  const padL=8,padR=8,padT=10,padB=16;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  let gmax=icr*1.3; for (const g of gArr) if (g>gmax) gmax=g*1.15;
+  const n=gArr.length;
+  const sx = plotW/Math.max(1,(n-1));
+  function xPix(i){ return padL+i*sx; }
+  function yPix(v){ return padT+plotH*(1-v/gmax); }
+
+  // unsafe band above allowable
+  ctx.fillStyle='rgba(232,98,44,0.10)';
+  ctx.fillRect(padL, padT, plotW, yPix(iallow)-padT);
+
+  ctx.beginPath(); ctx.moveTo(xPix(0), yPix(0));
+  for (let i=0;i<n;i++) ctx.lineTo(xPix(i), yPix(gArr[i]));
+  ctx.lineTo(xPix(n-1), yPix(0)); ctx.closePath();
+  const grad = ctx.createLinearGradient(0,padT,0,padT+plotH);
+  grad.addColorStop(0,'rgba(230,60,50,0.32)'); grad.addColorStop(1,'rgba(230,60,50,0.02)');
+  ctx.fillStyle=grad; ctx.fill();
+
+  ctx.strokeStyle='#e6564a'; ctx.lineWidth=2;
+  ctx.beginPath();
+  for (let i=0;i<n;i++){ const x=xPix(i),y=yPix(gArr[i]); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }
+  ctx.stroke();
+
+  // icr dashed
+  ctx.setLineDash([4,3]); ctx.strokeStyle='rgba(233,228,216,0.55)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(padL,yPix(icr)); ctx.lineTo(w-padR,yPix(icr)); ctx.stroke();
+  // allowable solid amber
+  ctx.setLineDash([]);
+  ctx.strokeStyle='rgba(220,154,60,0.9)'; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(padL,yPix(iallow)); ctx.lineTo(w-padR,yPix(iallow)); ctx.stroke();
+
+  ctx.strokeStyle='rgba(233,228,216,0.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(padL,yPix(0)); ctx.lineTo(w-padR,yPix(0)); ctx.stroke();
+
+  ctx.fillStyle='rgba(143,160,172,0.9)'; ctx.font='10px IBM Plex Mono, monospace';
+  ctx.textAlign='left'; ctx.fillText('toe', padL+2, padT+11);
+  ctx.textAlign='right';
+  ctx.fillText('icr = '+icr.toFixed(2), w-padR-2, yPix(icr)-3);
+  ctx.fillText('i_allow = '+iallow.toFixed(2), w-padR-2, yPix(iallow)+11);
+}
+
+function sampleField(field, nx, nz, xi, zj){
+  xi = Math.max(0,Math.min(nx-1.001,xi));
+  zj = Math.max(0,Math.min(nz-1.001,zj));
+  const i0=Math.floor(xi), j0=Math.floor(zj);
+  const fx=xi-i0, fz=zj-j0;
+  const i1=Math.min(nx-1,i0+1), j1=Math.min(nz-1,j0+1);
+  const v00=field[j0*nx+i0], v10=field[j0*nx+i1], v01=field[j1*nx+i0], v11=field[j1*nx+i1];
+  return v00*(1-fx)*(1-fz)+v10*fx*(1-fz)+v01*(1-fx)*fz+v11*fx*fz;
+}
+
+// Keep a traced point from crossing into (or visually touching) a sealed
+// pile column while it's still within that pile's blocked depth range —
+// without this, paths that must funnel through the narrow gap below a
+// pile tip can numerically graze the column and look like they run
+// straight into it instead of curving smoothly alongside.
+function applyPileStandoff(xi, xiPrev, zj, piles, buffer){
+  for (const pl of piles){
+    if (zj <= pl.pileDepthJ + 0.4){
+      const side = xiPrev < pl.pileI ? -1 : (xiPrev > pl.pileI ? 1 : (xi < pl.pileI ? -1 : 1));
+      if (side < 0 && xi > pl.pileI - buffer) xi = pl.pileI - buffer;
+      else if (side > 0 && xi < pl.pileI + buffer) xi = pl.pileI + buffer;
+    }
+  }
+  return xi;
+}
+
+function traceDirection(vx, vz, nx, nz, xi0, zj0, sign, maxSteps, piles){
+  let xi=xi0, zj=zj0;
+  const pts=[[xi,zj]];
+  const ds = 0.35;
+  for (let step=0; step<maxSteps; step++){
+    const vxv = sampleField(vx,nx,nz,xi,zj), vzv = sampleField(vz,nx,nz,xi,zj);
+    const speed = Math.hypot(vxv,vzv);
+    if (speed < 1e-9) break;
+    const xiPrev = xi;
+    xi += sign*ds*vxv/speed;
+    zj += sign*ds*vzv/speed;
+    xi = applyPileStandoff(xi, xiPrev, zj, piles, 0.24);
+    if (xi<=0.15 || xi>=nx-1.15 || zj>=nz-1.15){ pts.push([xi,zj]); break; }
+    pts.push([xi,zj]);
+    if (zj<0) break;
+  }
+  return pts;
+}
+
+// Seed streamlines by equal increments of discharge at a control section just
+// upstream of the dam, then trace each one both forward (downstream, to its
+// exit) and backward (upstream, to where it entered). Flux-weighted seeding
+// keeps the traces from bunching on top of each other in anisotropic fields,
+// where the naive "evenly spaced in x" approach collapses most paths onto
+// nearly the same trajectory once they converge toward the dam.
+function traceStreamlines(vx, vz, Kx, h, nx, nz, dx, i0, seedCount, piles){
+  const qProfile = new Float64Array(nz);
+  for (let j=0;j<nz;j++){
+    const idx=j*nx+i0;
+    const kf = Kface(Kx[idx],Kx[idx+1]);
+    qProfile[j] = Math.abs(kf*(h[idx]-h[idx+1])/dx); // magnitude only — direction can go either way
+  }
+  const qCum = new Float64Array(nz);
+  let cum=0;
+  for (let j=0;j<nz;j++){ cum+=qProfile[j]; qCum[j]=cum; }
+  const qTotal = qCum[nz-1];
+  if (qTotal<=1e-9) return [];
+
+  const lines=[];
+  for (let k=1;k<=seedCount;k++){
+    const target = (k-0.5)/seedCount*qTotal;
+    let j=0; while (j<nz-1 && qCum[j]<target) j++;
+    const fwd = traceDirection(vx,vz,nx,nz,i0,j,1,2200,piles);
+    const bwd = traceDirection(vx,vz,nx,nz,i0,j,-1,2200,piles);
+    const full = bwd.slice().reverse().concat(fwd.slice(1));
+    if (full.length>4) lines.push(full);
+  }
+  return lines;
+}
+
+let solving=false;
+function recompute(){
+  if (solving) return;
+  solving = true;
+  statusEl.classList.add('solving');
+  statusVal.textContent = 'solving…';
+  requestAnimationFrame(()=>requestAnimationFrame(runPipeline));
+}
+
+function runPipeline(){
+  const t0 = performance.now();
+  const p = readParams();
+  updateLabels(p);
+
+  const nx = 150;
+  const nz = Math.max(36, Math.min(110, Math.round(nx * p.D/p.L)));
+  const dx = p.L/(nx-1), dz = p.D/(nz-1);
+
+  const damCenter = p.L/2;
+  const damStartX = damCenter - p.damW/2;
+  const damEndX = damCenter + p.damW/2;
+  const damStartI = Math.max(1, Math.round(damStartX/dx));
+  const damEndI = Math.min(nx-2, Math.round(damEndX/dx));
+
+  const piles = p.pileFracs.map(f=>{
+    const pileX = damStartX + f.xFrac*(damEndX-damStartX);
+    let pileI = Math.round(pileX/dx);
+    pileI = Math.max(damStartI, Math.min(damEndI, pileI));
+    const pileDepthJ = Math.round(f.dFrac*p.D/dz);
+    return { pileI, pileDepthJ };
+  });
+  // deepest pile at each column, for quick "is this column sealed at depth j" checks
+  const pileBlockDepth = new Int32Array(nx).fill(-1);
+  for (const pl of piles){ if (pl.pileDepthJ > pileBlockDepth[pl.pileI]) pileBlockDepth[pl.pileI] = pl.pileDepthJ; }
+
+  const {K: Kx, lnK} = buildKField(nx, nz, dx, dz, p.corr, p.Kg, p.sigma, currentSeed);
+  const Ky = new Float64Array(nx*nz);
+  for (let n=0;n<Kx.length;n++) Ky[n] = Kx[n]*p.aniso;
+  const res = solveSeepage(nx, nz, dx, dz, Kx, Ky, damStartI, damEndI, p.H1, p.H2, piles, 3000, 1e-8);
+  const h = res.h;
+
+  // velocity field (Darcy)
+  const vx = new Float64Array(nx*nz), vz = new Float64Array(nx*nz);
+  for (let j=0;j<nz;j++){
+    for (let i=0;i<nx;i++){
+      const idx=j*nx+i;
+      let gx, gz;
+      if (i===0) gx=(h[idx+1]-h[idx])/dx;
+      else if (i===nx-1) gx=(h[idx]-h[idx-1])/dx;
+      else gx=(h[idx+1]-h[idx-1])/(2*dx);
+      if (j===0) gz=(h[idx+nx]-h[idx])/dz;
+      else if (j===nz-1) gz=(h[idx]-h[idx-nx])/dz;
+      else gz=(h[idx+nx]-h[idx-nx])/(2*dz);
+      // zero velocity across any sealed pile face
+      let kxLocal = Kx[idx];
+      const sealedHere = (pileBlockDepth[i]>=0 && j<=pileBlockDepth[i]) || (i>0 && pileBlockDepth[i-1]>=0 && j<=pileBlockDepth[i-1]);
+      if (sealedHere) kxLocal = 0;
+      vx[idx] = -kxLocal*gx;
+      vz[idx] = -Ky[idx]*gz;
+    }
+  }
+
+  // diagnostics: discharge at a section under the dam (or at pile), exit gradient at downstream toe
+  function fluxAtColumn(i){
+    let q=0;
+    for (let j=0;j<nz;j++){
+      const idx=j*nx+i;
+      if (i<nx-1){
+        const blocked = (pileBlockDepth[i+1]>=0 && j<=pileBlockDepth[i+1]);
+        if (!blocked){
+          const kf = Kface(Kx[idx],Kx[idx+1]);
+          q += kf*(h[idx]-h[idx+1])/dx*dz;
+        }
+      }
+    }
+    return q;
+  }
+  const qSection = Math.max(1, Math.min(nx-2, damEndI+1));
+  const Q = Math.abs(fluxAtColumn(qSection));
+
+  // outlet-side distributions: vertical exit velocity & exit gradient, from the toe to the downstream edge
+  const outletI0 = Math.min(nx-2, damEndI+1);
+  const outletN = nx-1-outletI0;
+  const outletX = [], outletG = [], outletV = [];
+  for (let k=0;k<=outletN;k++){
+    const i = outletI0+k;
+    const g = Math.abs((h[1*nx+i]-h[0*nx+i])/dz);
+    const v = Ky[0*nx+i]*g;
+    outletX.push(k*dx); outletG.push(g); outletV.push(v);
+  }
+  let gExit = 0; for (const g of outletG) if (g>gExit) gExit = g; // max exit gradient in outlet zone
+  const icr = p.icr;
+  const iallow = p.icr/p.fsreq;
+  const FS = gExit>1e-6 ? icr/gExit : Infinity;
+  const isSafe = gExit <= iallow;
+
+  // uplift pressure diagram along the dam base (row j=0) and resultant force
+  const baseH = new Float64Array(nx);
+  for (let i=0;i<nx;i++) baseH[i] = h[i];
+  const gammaW = 9.81; // kN/m3
+  let upliftForce = 0;
+  for (let i=damStartI;i<damEndI;i++){
+    upliftForce += 0.5*(baseH[i]+baseH[i+1])*dx;
+  }
+  upliftForce *= gammaW;
+
+  // render K field
+  const kCanvas = document.getElementById('kCanvas');
+  const hCanvas = document.getElementById('hCanvas');
+  const dispW = kCanvas.parentElement.clientWidth - 32;
+  const aspect = p.D/p.L;
+  const cw = Math.round(dispW);
+  const ch = Math.round(Math.max(140, Math.min(520, cw*aspect)));
+  const topMargin = Math.round(Math.max(56, Math.min(150, ch*0.55)));
+  const totalH = ch + topMargin;
+  [kCanvas, hCanvas].forEach(c=>{ c.width=cw; c.height=totalH; });
+
+  let kmin=Infinity,kmax=-Infinity;
+  for (let n=0;n<lnK.length;n++){ if(lnK[n]<kmin)kmin=lnK[n]; if(lnK[n]>kmax)kmax=lnK[n]; }
+  const kctx = kCanvas.getContext('2d');
+  kctx.clearRect(0,0,cw,totalH);
+  drawHeatmap(kCanvas, lnK, nx, nz, kColor, kmin, kmax, topMargin, ch);
+  drawOverlay(kctx, cw, ch, nx, nz, damStartI, damEndI, piles, p.H1, p.H2, topMargin, topMargin);
+
+  const hctx = hCanvas.getContext('2d');
+  hctx.clearRect(0,0,cw,totalH);
+  drawHeatmap(hCanvas, h, nx, nz, hColor, p.H2, p.H1, topMargin, ch);
+  const sxr = cw/(nx-1), syr = ch/(nz-1);
+
+  // equipotential contours
+  hctx.strokeStyle = 'rgba(15,20,26,0.65)';
+  hctx.lineWidth = 1.8;
+  const nLevels = 11;
+  for (let L2=1; L2<nLevels; L2++){
+    const level = p.H2 + (p.H1-p.H2)*L2/nLevels;
+    const segs = contourSegments(h, nx, nz, level);
+    hctx.beginPath();
+    for (const s of segs){
+      hctx.moveTo(s[0][0]*sxr, topMargin+s[0][1]*syr);
+      hctx.lineTo(s[1][0]*sxr, topMargin+s[1][1]*syr);
+    }
+    hctx.stroke();
+  }
+
+  // streamlines — flux-weighted seeding at a control section on the higher-head
+  // side of the dam (flow can run either direction depending on H1 vs H2)
+  const seedCount = 12;
+  const seedI0 = p.H1 >= p.H2 ? Math.max(1, damStartI-2) : Math.min(nx-2, damEndI+1);
+  const lines = traceStreamlines(vx, vz, Kx, h, nx, nz, dx, seedI0, seedCount, piles);
+  hctx.strokeStyle = 'rgba(230,60,50,0.85)';
+  hctx.lineWidth = 2;
+  for (const pts of lines){
+    hctx.beginPath();
+    hctx.moveTo(pts[0][0]*sxr, topMargin+pts[0][1]*syr);
+    for (let k=1;k<pts.length;k++) hctx.lineTo(pts[k][0]*sxr, topMargin+pts[k][1]*syr);
+    hctx.stroke();
+  }
+
+  // snapshot the heatmap+contours+streamlines layer so dragging a pile can
+  // redraw just the overlay (dam/water/piles) on top without re-solving
+  if (!hBaseSnapshot) hBaseSnapshot = document.createElement('canvas');
+  hBaseSnapshot.width = cw; hBaseSnapshot.height = totalH;
+  hBaseSnapshot.getContext('2d').drawImage(hCanvas, 0, 0);
+
+  renderState = { cw, ch, totalH, topMargin, nx, nz, dx, dz, damStartI, damEndI, H1: p.H1, H2: p.H2, piles, L: p.L, D: p.D, damW: p.damW };
+
+  drawOverlay(hctx, cw, ch, nx, nz, damStartI, damEndI, piles, p.H1, p.H2, topMargin, topMargin);
+
+  const upliftCanvas = document.getElementById('upliftCanvas');
+  upliftCanvas.width = cw;
+  upliftCanvas.height = Math.round(Math.max(120, Math.min(220, cw*0.28)));
+  drawUpliftDiagram(upliftCanvas, baseH, nx, p.H1, p.H2, damStartI, damEndI, piles);
+
+  const velCanvas = document.getElementById('velCanvas');
+  const gradCanvas = document.getElementById('gradCanvas');
+  const outletCW = Math.round((velCanvas.parentElement.clientWidth||cw/2)-2);
+  const outletCH = Math.round(Math.max(110, Math.min(180, outletCW*0.55)));
+  velCanvas.width = outletCW; velCanvas.height = outletCH;
+  gradCanvas.width = outletCW; gradCanvas.height = outletCH;
+  drawExitVelocityChart(velCanvas, outletX, outletV);
+  drawExitGradientChart(gradCanvas, outletX, outletG, icr, iallow);
+
+  const verdictBar = document.getElementById('verdictBar');
+  verdictBar.textContent = isSafe
+    ? `SAFE — max exit gradient ${gExit.toFixed(3)} ≤ allowable ${iallow.toFixed(3)} (i_cr ${icr.toFixed(2)} ÷ FS ${p.fsreq.toFixed(1)})`
+    : `UNSAFE — max exit gradient ${gExit.toFixed(3)} exceeds allowable ${iallow.toFixed(3)} (i_cr ${icr.toFixed(2)} ÷ FS ${p.fsreq.toFixed(1)})`;
+  verdictBar.style.background = isSafe ? 'rgba(95,185,138,0.12)' : 'rgba(232,98,44,0.14)';
+  verdictBar.style.color = isSafe ? 'var(--ok)' : 'var(--amber-hot)';
+  verdictBar.style.border = '1px solid ' + (isSafe ? 'rgba(95,185,138,0.35)' : 'rgba(232,98,44,0.4)');
+
+  // results
+  document.getElementById('stat_Q').innerHTML = Q.toFixed(3)+'<span class="u">m³/day per m</span>';
+  document.getElementById('stat_ig').innerHTML = gExit.toFixed(3)+'<span class="u">i</span>';
+  const fsEl = document.getElementById('stat_fs');
+  const fsCard = document.getElementById('stat_fs_card');
+  fsEl.textContent = isFinite(FS) ? FS.toFixed(2) : '∞';
+  fsCard.className = 'stat ' + (isSafe ? 'safe' : 'warn');
+  document.getElementById('stat_uplift').innerHTML = upliftForce.toFixed(1)+'<span class="u">kN per m</span>';
+  document.getElementById('stat_iter').textContent = res.iter;
+
+  const dt = performance.now()-t0;
+  statusEl.classList.remove('solving');
+  statusVal.innerHTML = dt.toFixed(0)+' ms · '+res.iter+' CG iterations';
+  solving = false;
+}
+
+// wire up inputs
+document.querySelectorAll('input[type=range]').forEach(inp=>{
+  let timer=null;
+  inp.addEventListener('input', ()=>{
+    updateLabels(readParams());
+    clearTimeout(timer);
+    timer = setTimeout(recompute, 160);
+  });
+});
+document.getElementById('reseedBtn').addEventListener('click', ()=>{
+  currentSeed = Math.floor(Math.random()*1e9);
+  recompute();
+});
+window.addEventListener('resize', ()=>{ clearTimeout(window.__rt); window.__rt=setTimeout(recompute,200); });
+
+// --- drag piles and the dam base edges directly on the head-field canvas ---
+const hCanvasEl = document.getElementById('hCanvas');
+let dragTarget = null; // {type:'pile', index} | {type:'dam', side:'heel'|'toe'} | null
+
+function canvasPointToGrid(clientX, clientY){
+  const rect = hCanvasEl.getBoundingClientRect();
+  const scaleX = hCanvasEl.width / rect.width, scaleY = hCanvasEl.height / rect.height;
+  const px = (clientX - rect.left) * scaleX;
+  const py = (clientY - rect.top) * scaleY;
+  const rs = renderState;
+  const sx = rs.cw/(rs.nx-1), sy = rs.ch/(rs.nz-1);
+  return { i: px/sx, j: (py-rs.topMargin)/sy, px, py };
+}
+
+function hitTest(clientX, clientY){
+  if (!renderState) return null;
+  const g = canvasPointToGrid(clientX, clientY);
+  const rs = renderState;
+  const sx = rs.cw/(rs.nx-1), sy = rs.ch/(rs.nz-1);
+  const hitPx = 11;
+  for (let n=0; n<rs.piles.length; n++){
+    const pl = rs.piles[n];
+    const pilePx = pl.pileI*sx;
+    const pileBotPy = rs.topMargin + pl.pileDepthJ*sy;
+    if (Math.abs(g.px - pilePx) <= hitPx && g.py >= rs.topMargin-14 && g.py <= pileBotPy+14) return {type:'pile', index:n};
+  }
+  const groundPy = rs.topMargin;
+  if (Math.abs(g.py - groundPy) <= 12){
+    if (Math.abs(g.px - rs.damStartI*sx) <= hitPx) return {type:'dam', side:'heel'};
+    if (Math.abs(g.px - rs.damEndI*sx) <= hitPx) return {type:'dam', side:'toe'};
+  }
+  return null;
+}
+
+function redrawDragPreview(target, gridI, gridJ){
+  const rs = renderState;
+  const hctx = hCanvasEl.getContext('2d');
+  hctx.clearRect(0,0,rs.cw,rs.totalH);
+  hctx.drawImage(hBaseSnapshot,0,0);
+
+  if (target.type==='pile'){
+    const clampedI = Math.max(rs.damStartI, Math.min(rs.damEndI, Math.round(gridI)));
+    const clampedJ = Math.max(0, Math.min(rs.nz-1, Math.round(gridJ)));
+    const tempPiles = rs.piles.map((pl,n)=> n===target.index ? {pileI:clampedI, pileDepthJ:clampedJ} : pl);
+    drawOverlay(hctx, rs.cw, rs.ch, rs.nx, rs.nz, rs.damStartI, rs.damEndI, tempPiles, rs.H1, rs.H2, rs.topMargin, rs.topMargin);
+    return { clampedI, clampedJ };
+  } else {
+    // dam base resizes symmetrically about the foundation center
+    const centerX = rs.L/2;
+    const xPhys = Math.max(0, Math.min(rs.L, gridI*rs.dx));
+    const newHalfWidth = Math.max(2.5, Math.min(40, Math.abs(xPhys-centerX)));
+    const newDamW = newHalfWidth*2;
+    const newStartI = Math.max(1, Math.round((centerX-newHalfWidth)/rs.dx));
+    const newEndI = Math.min(rs.nx-2, Math.round((centerX+newHalfWidth)/rs.dx));
+    drawOverlay(hctx, rs.cw, rs.ch, rs.nx, rs.nz, newStartI, newEndI, rs.piles, rs.H1, rs.H2, rs.topMargin, rs.topMargin);
+    return { newDamW };
+  }
+}
+
+function commitDrag(target, result){
+  const rs = renderState;
+  if (target.type==='pile'){
+    const xFrac = (result.clampedI - rs.damStartI) / Math.max(1e-6, (rs.damEndI - rs.damStartI));
+    const dFrac = result.clampedJ / (rs.nz-1);
+    const n = target.index+1;
+    els['pileX'+n].value = Math.round(Math.max(0,Math.min(100, xFrac*100)));
+    els['pileD'+n].value = Math.round(Math.max(0,Math.min(100, dFrac*100)));
+  } else {
+    els.damW.value = Math.round(result.newDamW);
+  }
+  updateLabels(readParams());
+  recompute();
+}
+
+function cursorForTarget(t){
+  if (!t) return 'default';
+  return t.type==='dam' ? 'ew-resize' : 'grab';
+}
+
+function onDragStart(clientX, clientY){
+  const t = hitTest(clientX, clientY);
+  if (!t) return false;
+  dragTarget = t;
+  hCanvasEl.style.cursor = t.type==='dam' ? 'ew-resize' : 'grabbing';
+  return true;
+}
+function onDragMove(clientX, clientY){
+  if (!dragTarget || !renderState) return;
+  const g = canvasPointToGrid(clientX, clientY);
+  redrawDragPreview(dragTarget, g.i, g.j);
+}
+function onDragEnd(clientX, clientY){
+  if (!dragTarget) return;
+  const g = canvasPointToGrid(clientX, clientY);
+  const result = redrawDragPreview(dragTarget, g.i, g.j);
+  const t = dragTarget;
+  dragTarget = null;
+  hCanvasEl.style.cursor = 'default';
+  commitDrag(t, result);
+}
+
+hCanvasEl.addEventListener('mousedown', (e)=>{
+  if (onDragStart(e.clientX, e.clientY)) e.preventDefault();
+});
+window.addEventListener('mousemove', (e)=>{
+  if (dragTarget){ onDragMove(e.clientX, e.clientY); e.preventDefault(); }
+  else if (renderState){ hCanvasEl.style.cursor = cursorForTarget(hitTest(e.clientX, e.clientY)); }
+});
+window.addEventListener('mouseup', (e)=>{
+  if (dragTarget) onDragEnd(e.clientX, e.clientY);
+});
+
+hCanvasEl.addEventListener('touchstart', (e)=>{
+  const t = e.touches[0];
+  if (onDragStart(t.clientX, t.clientY)) e.preventDefault();
+}, {passive:false});
+window.addEventListener('touchmove', (e)=>{
+  if (dragTarget){ const t=e.touches[0]; onDragMove(t.clientX, t.clientY); e.preventDefault(); }
+}, {passive:false});
+window.addEventListener('touchend', (e)=>{
+  if (dragTarget){ const t=e.changedTouches[0]; onDragEnd(t.clientX, t.clientY); }
+});
+
+updateLabels(readParams());
+recompute();
+</script>
+</body>
+</html>
